@@ -30,7 +30,7 @@ class _WaitingToConnectState extends State<WaitingToConnect> {
                 margin: EdgeInsets.symmetric(horizontal: 35.0, vertical: 5.0),
                 child: Text(
                   widget.nodeConnection.getCode(),
-                  style: Theme.of(context).textTheme.title,
+                  style: Theme.of(context).textTheme.overline,
                 )),
             Container(
                 margin: EdgeInsets.symmetric(horizontal: 35.0, vertical: 5.0),

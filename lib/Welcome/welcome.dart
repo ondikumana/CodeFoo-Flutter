@@ -34,7 +34,7 @@ class _WelcomeState extends State<Welcome> {
 
   _checkIfAlreadyGivenName() async {
     await widget.nodeConnection.getAttributesFromSharedPreferences();
-    print(widget.nodeConnection.getUserId());
+
     if (widget.nodeConnection.getUserId() != null) {
       Navigator.pushReplacement(
           context,
@@ -115,9 +115,14 @@ class _WelcomeState extends State<Welcome> {
                               style: Theme.of(context).textTheme.button,
                             ),
                       onPressed: _submitName,
+                    ))
+                : Container(
+                    margin:
+                        EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
+                    child: SizedBox(
+                      height: 64,
                     ),
                   )
-                : Container()
           ],
         ),
       ),

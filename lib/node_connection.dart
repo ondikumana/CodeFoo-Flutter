@@ -1,6 +1,6 @@
-import 'dart:_http';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,6 +10,7 @@ final String createUserEndpoint = '$server/create_user';
 final String getUserEndpoint = '$server/get_user';
 final String getSessionIdEndpoint = '$server/get_session';
 final String createSessionEndpoint = '$server/create_session';
+final String getSessionEndpoint = '$server/get_session';
 
 class NodeConnection {
   String firstName;
@@ -35,8 +36,9 @@ class NodeConnection {
 
     Map<String, String> body = {'firstName': firstName, 'lastName': lastName};
 
-    final Response response =
-        await post(createUserEndpoint, body: json.encode(body));
+    final Response response = await post(createUserEndpoint,
+        headers: {HttpHeaders.contentTypeHeader: 'application/json'},
+        body: json.encode(body));
 
     if (response.statusCode == 200) {
       Map<String, dynamic> responseBody = json.decode(response.body);
@@ -52,15 +54,10 @@ class NodeConnection {
     return false;
   }
 
-  Future<String> createSession() async {
-    if (sessionId != null) return code;
+  Future<bool> createSession() async {
+    if (sessionId != null) return true;
 
-    Map<dynamic, dynamic> body = {
-      'creatorId': userId,
-      'body': {'Yes': true}
-    };
-
-    print(body);
+    Map<String, String> body = {'creatorId': userId};
 
     final Response response = await post(createSessionEndpoint,
         headers: {HttpHeaders.contentTypeHeader: 'application/json'},
@@ -72,15 +69,31 @@ class NodeConnection {
       sessionId = responseBody['sessionId'].toString();
       code = responseBody['code'].toString();
 
-      print(responseBody);
-
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('sessionId', sessionId);
 
-      return code;
+      return true;
     }
 
-    return null;
+    return false;
+  }
+
+  Future<bool> checkSession() async {
+    if (sessionId != null) return true;
+    try {
+      Response response = await get('$getSessionEndpoint?code=$code&friendId=$userId');
+
+      Map <String, dynamic> responseBody = json.decode(response.body);
+      print(responseBody);
+
+      if (response.statusCode == 200 && responseBody['data'][0]['friend_id'] == userId) {
+        sessionId = responseBody['data'][0]['session_id'];
+        return true;
+      }
+    } catch (err) {
+      print(err);
+    }
+    return false;
   }
 
   String getName() {
@@ -114,26 +127,32 @@ class NodeConnection {
 
   Future<Null> _checkIfUserIdFromPrefsValid(
       String userIdFromPrefs, SharedPreferences prefs) async {
-    Response response = await get('$getUserEndpoint?userId=$userIdFromPrefs');
+    try {
+      Response response = await get('$getUserEndpoint?userId=$userIdFromPrefs');
 
-    if (response.statusCode == 200) {
-      userId = userIdFromPrefs;
-      firstName = json.decode(response.body)['data'][0]['first_name'];
-      lastName = json.decode(response.body)['data'][0]['last_name'];
-    } else {
+      if (response.statusCode == 200) {
+        userId = userIdFromPrefs;
+        firstName = json.decode(response.body)['data'][0]['first_name'];
+        lastName = json.decode(response.body)['data'][0]['last_name'];
+      }
+    } catch (err) {
+      print(err);
       prefs.remove('userId');
     }
   }
 
   Future<Null> _checkIfSessionIdFromPrefsValid(
       String sessionIdFromPrefs, SharedPreferences prefs) async {
-    Response response =
-        await get('$getSessionIdEndpoint?userId=$sessionIdFromPrefs');
+    try {
+      Response response =
+          await get('$getSessionIdEndpoint?userId=$sessionIdFromPrefs');
 
-    if (response.statusCode == 200) {
-      sessionId = sessionIdFromPrefs;
-      code = json.decode(response.body)['data'][0]['code'];
-    } else {
+      if (response.statusCode == 200) {
+        sessionId = sessionIdFromPrefs;
+        code = json.decode(response.body)['data'][0]['code'];
+      }
+    } catch (err) {
+      print(err);
       prefs.remove('sessionId');
     }
   }

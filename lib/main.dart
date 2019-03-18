@@ -41,9 +41,13 @@ class MyAppState extends State<MyApp> {
                   fontWeight: FontWeight.bold,
                   fontSize: 35,
                   color: Colors.white),
+              overline: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 50,
+                  color: Colors.white),
               subtitle: TextStyle(
                   fontStyle: FontStyle.italic,
-                  fontSize: 10,
+                  fontSize: 15,
                   color: Colors.grey),
               button:
                   TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../node_connection.dart';
 import '../WaitingToConnect/waiting_to_connect.dart';
+import '../Messages/messages.dart';
 
 class EnterCode extends StatefulWidget {
   final NodeConnection nodeConnection;
@@ -19,12 +20,45 @@ class _EnterCodeState extends State<EnterCode> {
   bool _codeGenerated = false;
   bool _codeGenerateError = false;
 
+  bool _checkingCode = false;
+  bool _codeChecked = false;
+  bool _codeValid = false;
+
   String _code = '';
 
   _setCode(String code) {
     setState(() {
       _code = code;
     });
+  }
+
+  _checkCode() async {
+    if (_codeValid) return;
+    setState(() {
+      _checkingCode = true;
+      _codeValid = false;
+    });
+
+    bool isCodeValid = await widget.nodeConnection.checkSession();
+
+    if (isCodeValid) {
+      setState(() {
+        _codeValid = true;
+        _checkingCode = false;
+        _codeChecked = true;
+      });
+
+      Navigator.push(
+          context,
+          new MaterialPageRoute(
+              builder: (context) => new Messages(widget.nodeConnection)));
+    } else {
+      setState(() {
+        _codeValid = false;
+        _checkingCode = false;
+        _codeChecked = true;
+      });
+    }
   }
 
   _generateCode() async {
@@ -34,11 +68,9 @@ class _EnterCodeState extends State<EnterCode> {
       _codeGenerateError = false;
     });
 
-    String codeGenerated = await widget.nodeConnection.createSession();
+    bool isCodeGenerated = await widget.nodeConnection.createSession();
 
-    print(codeGenerated);
-
-    if (codeGenerated != null) {
+    if (isCodeGenerated) {
       setState(() {
         _codeGenerated = true;
         _generatingCode = false;
@@ -123,9 +155,12 @@ class _EnterCodeState extends State<EnterCode> {
             margin: EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
             child: TextField(
                 style: TextStyle(color: Colors.white),
-                decoration: InputDecoration(labelText: "Code"),
+                decoration: InputDecoration(
+                    labelText: "Code",
+                    helperText: _codeChecked && !_codeValid ? 'Invalid Code' : ''
+                ),
                 onChanged: (String name) => _setCode(name),
-                onSubmitted: (String name) => _setCode(name)),
+                onSubmitted: (String name) => _checkCode),
           ),
           _code.length >= 3
               ? Container(
@@ -134,14 +169,26 @@ class _EnterCodeState extends State<EnterCode> {
                   padding: EdgeInsets.all(8.0),
                   child: RaisedButton(
                     color: Color.fromARGB(255, 46, 50, 60),
-                    child: Text(
-                      'Continue',
-                      style: Theme.of(context).textTheme.button,
-                    ),
-                    onPressed: () {},
+                    child: _checkingCode
+                        ? Container(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(),
+                          )
+                        : Text(
+                            'Continue',
+                            style: Theme.of(context).textTheme.button,
+                          ),
+                    onPressed: _checkCode,
                   ),
                 )
-              : Container()
+              : Container(
+                  margin:
+                      EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
+                  child: SizedBox(
+                    height: 64,
+                  ),
+                )
         ],
       );
     }
