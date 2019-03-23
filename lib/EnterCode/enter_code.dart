@@ -39,6 +39,8 @@ class _EnterCodeState extends State<EnterCode> {
       _codeValid = false;
     });
 
+    widget.nodeConnection.setCode(_code);
+
     bool isCodeValid = await widget.nodeConnection.checkSession();
 
     if (isCodeValid) {

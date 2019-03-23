@@ -4,15 +4,19 @@ import 'dart:io';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-final String server = 'http://localhost:9999';
+final String server = 'http://10.0.2.2:9999';
+// final String server = 'http://localhost:9999';
 
 final String createUserEndpoint = '$server/create_user';
 final String getUserEndpoint = '$server/get_user';
 final String getSessionIdEndpoint = '$server/get_session';
 final String createSessionEndpoint = '$server/create_session';
 final String getSessionEndpoint = '$server/get_session';
+final String createMessageEndpoint = '$server/create_message';
 
 class NodeConnection {
+  String serverUrl = server;
+
   String firstName;
   String lastName;
   String userId;
@@ -27,6 +31,10 @@ class NodeConnection {
     } else {
       firstName = name;
     }
+  }
+
+  void setCode(String codeFromFriend) {
+    code = codeFromFriend;
   }
 
   NodeConnection();
@@ -81,18 +89,37 @@ class NodeConnection {
   Future<bool> checkSession() async {
     if (sessionId != null) return true;
     try {
-      Response response = await get('$getSessionEndpoint?code=$code&friendId=$userId');
+      Response response =
+          await get('$getSessionEndpoint?code=$code&friendId=$userId');
 
-      Map <String, dynamic> responseBody = json.decode(response.body);
-      print(responseBody);
+      Map<String, dynamic> responseBody = json.decode(response.body);
 
-      if (response.statusCode == 200 && responseBody['data'][0]['friend_id'] == userId) {
-        sessionId = responseBody['data'][0]['session_id'];
+      if (response.statusCode == 200 && responseBody['approved'] == true) {
+        sessionId = responseBody['data'][0]['session_id'].toString();
         return true;
       }
     } catch (err) {
       print(err);
     }
+    return false;
+  }
+
+  Future<bool> sendMessage(String messageBody, String type) async {
+    Map<String, String> body = {
+      'sessionId': sessionId,
+      'senderId': userId,
+      'type': type,
+      'body': messageBody
+    };
+
+    final Response response = await post(createMessageEndpoint,
+        headers: {HttpHeaders.contentTypeHeader: 'application/json'},
+        body: json.encode(body));
+
+    if (response.statusCode == 200) {
+      return true;
+    }
+
     return false;
   }
 
@@ -114,11 +141,13 @@ class NodeConnection {
 
   Future<Null> getAttributesFromSharedPreferences() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('userId');
+    await prefs.remove('sessionId');
 
     String userId = prefs.getString('userId');
     if (userId != null) await _checkIfUserIdFromPrefsValid(userId, prefs);
 
-    if (userId != null) {
+    if (sessionId != null) {
       String sessionId = prefs.getString('sessionId');
       if (sessionId != null)
         await _checkIfSessionIdFromPrefsValid(sessionId, prefs);
@@ -155,5 +184,9 @@ class NodeConnection {
       print(err);
       prefs.remove('sessionId');
     }
+  }
+
+  String getServerUrl() {
+    return serverUrl;
   }
 }

@@ -1,5 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+// import 'package:flutter_socket_io/socket_io_manager.dart';
 import '../node_connection.dart';
+import '../Messages/messages.dart';
+
+import 'package:adhara_socket_io/adhara_socket_io.dart';
 
 class WaitingToConnect extends StatefulWidget {
   final NodeConnection nodeConnection;
@@ -11,11 +17,59 @@ class WaitingToConnect extends StatefulWidget {
 }
 
 class _WaitingToConnectState extends State<WaitingToConnect> {
-  // @override
-  // void initState() {
-  //   _checkIfAlreadyGivenName();
-  //   super.initState();
-  // }
+  SocketIOManager manager;
+  SocketIO _socketIO;
+
+  @override
+  void initState() {
+    _handleSocket();
+
+    super.initState();
+  }
+
+  void _friendConnected(data) {
+
+    print('friendConnected Data $data');
+
+    String userId = widget.nodeConnection.getUserId();
+    // Map<String, dynamic> message = json.decode(data);
+
+    // print('decoded message $message');
+
+    if (data['type'] == 'friendConnected' &&
+        data['creator_id'].toString() == userId &&
+        data['friend_id'] != null) {
+      Navigator.push(
+          context,
+          new MaterialPageRoute(
+              builder: (context) => new Messages(widget.nodeConnection)));
+    }
+  }
+
+  void _handleSocket() async {
+    String sessionId = widget.nodeConnection.getSessionId();
+    String serverUrl = widget.nodeConnection.getServerUrl();
+
+    manager = SocketIOManager();
+    _socketIO = await manager.createInstance('$serverUrl/');
+
+    _socketIO.on("$sessionId", _friendConnected);
+
+    _socketIO.onConnect((data) {
+      print("connected...");
+      // print(data);
+    });
+    // _socketIO.onConnectError(pprint);
+    // _socketIO.onConnectTimeout(pprint);
+    // _socketIO.onError(pprint);
+    // _socketIO.onDisconnect(pprint);
+
+    _socketIO.connect();
+  }
+
+  void pprint(data) {
+    print(data);
+  }
 
   @override
   Widget build(BuildContext context) {
