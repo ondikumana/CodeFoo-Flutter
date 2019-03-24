@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../node_connection.dart';
 import '../WaitingToConnect/waiting_to_connect.dart';
 import '../Messages/messages.dart';
+import '../Welcome/welcome.dart';
 
 class EnterCode extends StatefulWidget {
   final NodeConnection nodeConnection;
@@ -25,6 +26,36 @@ class _EnterCodeState extends State<EnterCode> {
   bool _codeValid = false;
 
   String _code = '';
+
+  @override
+  void initState() {
+    _checkIfAlreadyHasCode();
+    super.initState();
+  }
+
+  _checkIfAlreadyHasCode() async{
+    String code = widget.nodeConnection.getCode();
+
+    if (code != null) {
+      bool isSessionCreator = widget.nodeConnection.getIsSessionCreator();
+
+      if (isSessionCreator) {
+        // delay otherwise it's created before build and it crashes
+        await Future.delayed(const Duration(milliseconds: 10));
+        Navigator.pushReplacement(
+            context,
+            new MaterialPageRoute(
+                builder: (context) =>
+                    new WaitingToConnect(widget.nodeConnection)));
+      } else {
+        await Future.delayed(const Duration(milliseconds: 10));
+        Navigator.pushReplacement(
+            context,
+            new MaterialPageRoute(
+                builder: (context) => new Messages(widget.nodeConnection)));
+      }
+    }
+  }
 
   _setCode(String code) {
     setState(() {
@@ -50,7 +81,7 @@ class _EnterCodeState extends State<EnterCode> {
         _codeChecked = true;
       });
 
-      Navigator.push(
+      Navigator.pushReplacement(
           context,
           new MaterialPageRoute(
               builder: (context) => new Messages(widget.nodeConnection)));
@@ -79,7 +110,7 @@ class _EnterCodeState extends State<EnterCode> {
         _codeGenerateError = false;
       });
 
-      Navigator.push(
+      Navigator.pushReplacement(
           context,
           new MaterialPageRoute(
               builder: (context) =>
@@ -91,6 +122,16 @@ class _EnterCodeState extends State<EnterCode> {
         _codeGenerateError = true;
       });
     }
+  }
+
+  void _sendBackToWelcome() async {
+    await widget.nodeConnection.deleteUser();
+    // create new empty node connection
+    NodeConnection nodeConnection = new NodeConnection();
+    Navigator.of(context).pushAndRemoveUntil(
+        new MaterialPageRoute(
+            builder: (context) => new Welcome(nodeConnection)),
+        ModalRoute.withName('/'));
   }
 
   @override
@@ -159,8 +200,8 @@ class _EnterCodeState extends State<EnterCode> {
                 style: TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                     labelText: "Code",
-                    helperText: _codeChecked && !_codeValid ? 'Invalid Code' : ''
-                ),
+                    helperText:
+                        _codeChecked && !_codeValid ? 'Invalid Code' : ''),
                 onChanged: (String name) => _setCode(name),
                 onSubmitted: (String name) => _checkCode),
           ),
@@ -230,7 +271,7 @@ class _EnterCodeState extends State<EnterCode> {
                     'No',
                     style: Theme.of(context).textTheme.button,
                   ),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: _sendBackToWelcome,
                 )
               ],
             ),

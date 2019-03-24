@@ -58,22 +58,27 @@ class _InputMessageState extends State<InputMessage> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 3.0, vertical: 8.0),
-      child: Flex(
-        direction: Axis.horizontal,
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return new Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      color: Color.fromARGB(255, 43, 66, 81),
+      child: new Row(
         children: <Widget>[
-          Container(
-            width: MediaQuery.of(context).size.width * 0.77,
-            child: TextField(
+          new Flexible(
+            child: new TextField(
+              style: TextStyle(color: Colors.white),
+              decoration:
+                  new InputDecoration.collapsed(hintText: "Enter message ..."),
               controller: inputController,
+              onSubmitted: (String val) => _sendMessage,
             ),
           ),
-          FlatButton(
-            
-            child: sendingMessage ? CircularProgressIndicator() : Text('Send'),
-            onPressed: _sendMessage,
+          new Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 5.0),
+            child: new IconButton(
+              icon:
+                  new Icon(Icons.send, color: Colors.white),
+              onPressed: _sendMessage,
+            ),
           )
         ],
       ),

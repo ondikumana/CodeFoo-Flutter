@@ -19,6 +19,7 @@ class _MessagesState extends State<Messages> {
   SocketIO socketIO;
   String sessionId;
   List messages = [];
+  String friendName = 'Friend';
 
   bool endingConversation = false;
   bool errorEndingConversation = false;
@@ -38,9 +39,10 @@ class _MessagesState extends State<Messages> {
     if (data['type'] == 'newMessage' &&
         data['session_id'].toString() == sessionId) {
       setState(() {
-        messages.add(data);
+        messages.insert(0, data);
+        // _sortMessages();
       });
-      // _sortMessages();
+      
     }
     if (data['type'] == 'deletedSession' &&
         data['session_id'].toString() == sessionId) {
@@ -51,6 +53,7 @@ class _MessagesState extends State<Messages> {
 
   void _handleSocket() async {
     String serverUrl = widget.nodeConnection.getServerUrl();
+    friendName = await widget.nodeConnection.getFriendName();
 
     manager = SocketIOManager();
     socketIO = await manager.createInstance('$serverUrl/');
@@ -75,8 +78,8 @@ class _MessagesState extends State<Messages> {
 
   void _sortMessages() {
     setState(() {
-      messages
-          .sort((message1, message2) => message2['time'] - message1['time']);
+      messages.sort((message1, message2) =>
+          message2['creation_date'].compareTo(message1['creation_date']));
     });
   }
 
@@ -107,6 +110,12 @@ class _MessagesState extends State<Messages> {
       setState(() {
         confirmEndConversation = true;
       });
+      await Future.delayed(const Duration(seconds: 4), () {
+        setState(() {
+          confirmEndConversation = false;
+        });
+      });
+
       return;
     }
     setState(() {
@@ -122,13 +131,6 @@ class _MessagesState extends State<Messages> {
         errorEndingConversation = false;
       });
 
-      // Map<String, dynamic> payload = {
-      //   'type': 'deletedSession',
-      //   'session_id': sessionId.toString()
-      // };
-
-      // socketIO.emit('$sessionId', [payload]);
-
       _sendBackToWelcome();
     } else {
       setState(() {
@@ -142,34 +144,61 @@ class _MessagesState extends State<Messages> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: Text('Talking to ${widget.nodeConnection.getFriendName()} '),
+          title: Text('Messages'),
           actions: <Widget>[
-            FlatButton(
-              padding: EdgeInsets.all(1.0),
-              color: Colors.red[600],
+            new Container(
+              margin:
+                  const EdgeInsets.symmetric(horizontal: 4.0, vertical: 5.0),
               child: endingConversation
                   ? CircularProgressIndicator()
-                  : Text(confirmEndConversation ? 'Confirm' : 'End'),
-              onPressed: _endConversation,
+                  : new IconButton(
+                      icon: new Icon(Icons.delete,
+                          color: confirmEndConversation
+                              ? Colors.red
+                              : Colors.black),
+                      onPressed: _endConversation,
+                    ),
             )
           ],
         ),
         body: Container(
-            color: Color.fromARGB(255, 43, 66, 81),
-            child: Column(
-              children: <Widget>[
-                Container(
-                    height: MediaQuery.of(context).size.height * 0.80,
-                    child: ListView.builder(
-                      itemCount: messages == null ? 0 : messages.length,
-                      itemBuilder: (context, index) {
-                        final message = messages[index];
+          color: Color.fromARGB(255, 43, 66, 81),
+          child: Column(
+            children: <Widget>[
+              new Flexible(
+                child: ListView.builder(
+                  padding: new EdgeInsets.all(8.0),
+                  reverse: true,
+                  itemBuilder: (context, index) {
+                    final message = messages[index];
 
-                        return Message(message);
-                      },
-                    )),
-                InputMessage(widget.nodeConnection)
-              ],
-            )));
+                    return Message(message, widget.nodeConnection);
+                  },
+                  itemCount: messages.length,
+                ),
+              ),
+              new Divider(
+                height: 1.0,
+              ),
+              new Container(
+                  decoration: new BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey[900],
+                        blurRadius:
+                            20.0, // has the effect of softening the shadow
+                        spreadRadius:
+                            5.0, // has the effect of extending the shadow
+                        offset: Offset(
+                          0.0, // horizontal, move right 10
+                          -10.0, // vertical, move down 10
+                        ),
+                      )
+                    ],
+                  ),
+                  child: InputMessage(widget.nodeConnection))
+            ],
+          ),
+        ));
   }
 }

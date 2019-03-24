@@ -22,9 +22,23 @@ class _WaitingToConnectState extends State<WaitingToConnect> {
 
   @override
   void initState() {
-    _handleSocket();
-
+    _checkIfIsAlreadyConnected();
     super.initState();
+  }
+
+  _checkIfIsAlreadyConnected() async {
+    bool isFriendConnected = widget.nodeConnection.getIsFriendConnected();
+    print('is friend connected? $isFriendConnected');
+    // delay otherwise it's created before build and it crashes
+    await Future.delayed(const Duration(milliseconds: 10));
+    if (isFriendConnected) {
+      Navigator.pushReplacement(
+          context,
+          new MaterialPageRoute(
+              builder: (context) => new Messages(widget.nodeConnection)));
+    } else {
+      _handleSocket();
+    }
   }
 
   void _friendConnected(data) async {
@@ -33,11 +47,11 @@ class _WaitingToConnectState extends State<WaitingToConnect> {
     if (data['type'] == 'friendConnected' &&
         data['creator_id'].toString() == userId &&
         data['friend_id'] != null) {
-      widget.nodeConnection.setFriendId(data['friendId']);
+      widget.nodeConnection.setFriendId(data['friend_id'].toString());
 
       await manager.clearInstance(socketIO);
 
-      Navigator.push(
+      Navigator.pushReplacement(
           context,
           new MaterialPageRoute(
               builder: (context) => new Messages(widget.nodeConnection)));
