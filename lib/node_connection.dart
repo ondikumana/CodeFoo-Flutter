@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-final String server = 'http://10.0.2.2:9999';
-// final String server = 'http://localhost:9999';
+// final String server = 'http://10.0.2.2:9999';
+final String server = 'http://localhost:9999';
 
 final String createUserEndpoint = '$server/create_user';
 final String getUserEndpoint = '$server/get_user';
@@ -13,6 +13,8 @@ final String getSessionIdEndpoint = '$server/get_session';
 final String createSessionEndpoint = '$server/create_session';
 final String getSessionEndpoint = '$server/get_session';
 final String createMessageEndpoint = '$server/create_message';
+final String getMessagesEndpoint = '$server/get_messages';
+final String deleteUserEndpoint = '$server/delete_user';
 
 class NodeConnection {
   String serverUrl = server;
@@ -22,6 +24,8 @@ class NodeConnection {
   String userId;
   String sessionId;
   String code;
+  String friendId;
+  String friendName;
 
   void setName(String name) {
     List<String> nameList = name.split(' ');
@@ -96,12 +100,31 @@ class NodeConnection {
 
       if (response.statusCode == 200 && responseBody['approved'] == true) {
         sessionId = responseBody['data'][0]['session_id'].toString();
+        friendId = responseBody['data'][0]['creator_id'].toString();
         return true;
       }
     } catch (err) {
       print(err);
     }
     return false;
+  }
+
+  Future<List> getInitialMessages() async {
+    if (sessionId != null) return null;
+    try {
+      Response response =
+          await get('$getMessagesEndpoint?sessionId=$sessionId');
+
+      Map<String, dynamic> responseBody = json.decode(response.body);
+
+      if (response.statusCode == 200 && responseBody['approved'] == true) {
+        List initialMessages = responseBody['data'].toList();
+        return initialMessages;
+      }
+    } catch (err) {
+      print(err);
+    }
+    return null;
   }
 
   Future<bool> sendMessage(String messageBody, String type) async {
@@ -123,6 +146,50 @@ class NodeConnection {
     return false;
   }
 
+  Future<bool> deleteUser() async {
+    if (userId == null) return false;
+
+    Map<String, String> body = {'userId': userId};
+
+    final Response response = await post(deleteUserEndpoint,
+        headers: {HttpHeaders.contentTypeHeader: 'application/json'},
+        body: json.encode(body));
+
+    if (response.statusCode == 200) {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.remove('userId');
+      await prefs.remove('sessionId');
+
+      return true;
+    }
+
+    return false;
+  }
+
+  Future<String> getFriendName() async {
+    if (friendName != null) return friendName;
+    try {
+      Response response = await get('$getUserEndpoint?userId=$friendId');
+
+      if (response.statusCode == 200) {
+        Map<String, dynamic> responseBody = json.decode(response.body);
+        String firstName = responseBody['first_name'];
+        String lastName = responseBody['last_name'];
+        String fetchedFriendName =
+            firstName + (lastName != null ? ' $lastName' : '');
+        friendName = fetchedFriendName;
+        return friendName;
+      }
+    } catch (err) {
+      print(err);
+    }
+    return 'Friend';
+  }
+
+  void setFriendId(String id) {
+    friendId = id;
+  }
+
   String getName() {
     return '$firstName $lastName';
   }
@@ -141,8 +208,8 @@ class NodeConnection {
 
   Future<Null> getAttributesFromSharedPreferences() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.remove('userId');
-    await prefs.remove('sessionId');
+    // await prefs.remove('userId');
+    // await prefs.remove('sessionId');
 
     String userId = prefs.getString('userId');
     if (userId != null) await _checkIfUserIdFromPrefsValid(userId, prefs);
@@ -166,7 +233,7 @@ class NodeConnection {
       }
     } catch (err) {
       print(err);
-      prefs.remove('userId');
+      await prefs.remove('userId');
     }
   }
 
@@ -182,7 +249,7 @@ class NodeConnection {
       }
     } catch (err) {
       print(err);
-      prefs.remove('sessionId');
+      await prefs.remove('sessionId');
     }
   }
 

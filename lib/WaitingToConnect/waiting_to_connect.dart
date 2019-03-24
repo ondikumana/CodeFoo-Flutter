@@ -18,7 +18,7 @@ class WaitingToConnect extends StatefulWidget {
 
 class _WaitingToConnectState extends State<WaitingToConnect> {
   SocketIOManager manager;
-  SocketIO _socketIO;
+  SocketIO socketIO;
 
   @override
   void initState() {
@@ -27,18 +27,16 @@ class _WaitingToConnectState extends State<WaitingToConnect> {
     super.initState();
   }
 
-  void _friendConnected(data) {
-
-    print('friendConnected Data $data');
-
+  void _friendConnected(data) async {
     String userId = widget.nodeConnection.getUserId();
-    // Map<String, dynamic> message = json.decode(data);
-
-    // print('decoded message $message');
 
     if (data['type'] == 'friendConnected' &&
         data['creator_id'].toString() == userId &&
         data['friend_id'] != null) {
+      widget.nodeConnection.setFriendId(data['friendId']);
+
+      await manager.clearInstance(socketIO);
+
       Navigator.push(
           context,
           new MaterialPageRoute(
@@ -51,20 +49,20 @@ class _WaitingToConnectState extends State<WaitingToConnect> {
     String serverUrl = widget.nodeConnection.getServerUrl();
 
     manager = SocketIOManager();
-    _socketIO = await manager.createInstance('$serverUrl/');
+    socketIO = await manager.createInstance('$serverUrl/');
 
-    _socketIO.on("$sessionId", _friendConnected);
+    socketIO.on("$sessionId", _friendConnected);
 
-    _socketIO.onConnect((data) {
+    socketIO.onConnect((data) {
       print("connected...");
       // print(data);
     });
-    // _socketIO.onConnectError(pprint);
-    // _socketIO.onConnectTimeout(pprint);
-    // _socketIO.onError(pprint);
-    // _socketIO.onDisconnect(pprint);
+    // socketIO.onConnectError(pprint);
+    // socketIO.onConnectTimeout(pprint);
+    // socketIO.onError(pprint);
+    // socketIO.onDisconnect(pprint);
 
-    _socketIO.connect();
+    socketIO.connect();
   }
 
   void pprint(data) {
