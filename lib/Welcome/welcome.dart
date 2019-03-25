@@ -93,7 +93,10 @@ class _WelcomeState extends State<Welcome> {
               margin: EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
               child: TextField(
                   style: TextStyle(color: Colors.white),
-                  decoration: InputDecoration(labelText: "Name"),
+                  decoration: InputDecoration(
+                      labelText: "Name",
+                      helperText:
+                          _errorSubmittingName ? 'Unable to set name' : ''),
                   onChanged: (String name) => _setName(name),
                   onSubmitted: (String name) => _submitName()),
             ),

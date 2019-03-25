@@ -51,19 +51,24 @@ class NodeConnection {
 
     Map<String, String> body = {'firstName': firstName, 'lastName': lastName};
 
-    final Response response = await post(createUserEndpoint,
-        headers: {HttpHeaders.contentTypeHeader: 'application/json'},
-        body: json.encode(body));
+    try {
+      final Response response = await post(createUserEndpoint,
+          headers: {HttpHeaders.contentTypeHeader: 'application/json'},
+          body: json.encode(body));
 
-    if (response.statusCode == 200) {
-      Map<String, dynamic> responseBody = json.decode(response.body);
+      if (response.statusCode == 200) {
+        Map<String, dynamic> responseBody = json.decode(response.body);
 
-      userId = responseBody['userId'].toString();
+        userId = responseBody['userId'].toString();
 
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('userId', userId);
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('userId', userId);
 
-      return true;
+        return true;
+      }
+    } catch (err) {
+      print(err);
+      // return(err);
     }
 
     return false;
@@ -74,23 +79,27 @@ class NodeConnection {
 
     Map<String, String> body = {'creatorId': userId};
 
-    final Response response = await post(createSessionEndpoint,
-        headers: {HttpHeaders.contentTypeHeader: 'application/json'},
-        body: json.encode(body));
+    try {
+      final Response response = await post(createSessionEndpoint,
+          headers: {HttpHeaders.contentTypeHeader: 'application/json'},
+          body: json.encode(body));
 
-    if (response.statusCode == 200) {
-      Map<String, dynamic> responseBody = json.decode(response.body);
+      if (response.statusCode == 200) {
+        Map<String, dynamic> responseBody = json.decode(response.body);
 
-      sessionId = responseBody['sessionId'].toString();
-      code = responseBody['code'].toString();
-      isSessionCreator = true;
+        sessionId = responseBody['sessionId'].toString();
+        code = responseBody['code'].toString();
+        isSessionCreator = true;
 
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('sessionId', sessionId);
-      await prefs.setBool('isSessionCreator', isSessionCreator);
-      await prefs.setString('code', code);
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('sessionId', sessionId);
+        await prefs.setBool('isSessionCreator', isSessionCreator);
+        await prefs.setString('code', code);
 
-      return true;
+        return true;
+      }
+    } catch (err) {
+      print(err);
     }
 
     return false;
@@ -98,11 +107,14 @@ class NodeConnection {
 
   Future<bool> checkSession() async {
     if (sessionId != null) return true;
+    print('$code $userId');
     try {
       Response response =
-          await get('$joinSessionEndpoint?code=$code&friendId=$userId');
+          await get('$joinSessionEndpoint?code=$code&friendId=$userId', headers: {HttpHeaders.contentTypeHeader: 'application/json'});
 
       Map<String, dynamic> responseBody = json.decode(response.body);
+
+      print('response body $responseBody');
 
       if (response.statusCode == 200 && responseBody['approved'] == true) {
         sessionId = responseBody['data'][0]['session_id'].toString();
@@ -125,7 +137,7 @@ class NodeConnection {
     if (sessionId == null) return null;
     try {
       Response response =
-          await get('$getMessagesEndpoint?sessionId=$sessionId');
+          await get('$getMessagesEndpoint?sessionId=$sessionId', headers: {HttpHeaders.contentTypeHeader: 'application/json'});
 
       Map<String, dynamic> responseBody = json.decode(response.body);
       print('initial messages responsebody $responseBody');
@@ -183,7 +195,7 @@ class NodeConnection {
   Future<String> getFriendName() async {
     if (friendName != null) return friendName;
     try {
-      Response response = await get('$getUserEndpoint?userId=$friendId');
+      Response response = await get('$getUserEndpoint?userId=$friendId', headers: {HttpHeaders.contentTypeHeader: 'application/json'});
 
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
@@ -269,7 +281,7 @@ class NodeConnection {
   Future<Null> _checkIfUserIdFromPrefsValid(
       String userIdFromPrefs, SharedPreferences prefs) async {
     try {
-      Response response = await get('$getUserEndpoint?userId=$userIdFromPrefs');
+      Response response = await get('$getUserEndpoint?userId=$userIdFromPrefs', headers: {HttpHeaders.contentTypeHeader: 'application/json'});
 
       if (response.statusCode == 200) {
         userId = userIdFromPrefs;
@@ -286,7 +298,7 @@ class NodeConnection {
       String sessionIdFromPrefs, SharedPreferences prefs) async {
     try {
       Response response =
-          await get('$getSessionEndpoint?sessionId=$sessionIdFromPrefs');
+          await get('$getSessionEndpoint?sessionId=$sessionIdFromPrefs', headers: {HttpHeaders.contentTypeHeader: 'application/json'});
 
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
@@ -306,7 +318,6 @@ class NodeConnection {
               isFriendConnected = false;
             }
           }
-          
         } else {
           await prefs.remove('sessionId');
         }

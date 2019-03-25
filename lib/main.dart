@@ -39,7 +39,7 @@ class MyAppState extends State<MyApp> {
               body2: TextStyle(color: Colors.white),
               title: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 35,
+                  fontSize: 32,
                   color: Colors.white),
               overline: TextStyle(
                   fontWeight: FontWeight.bold,
